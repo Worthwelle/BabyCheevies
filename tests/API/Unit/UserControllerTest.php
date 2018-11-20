@@ -45,7 +45,7 @@ class UserControllerTest extends TestCase
      */
     public function testRegisterUser()
     {
-        $this->post('/api/v1/auth/register', [
+        $this->post('/api/v1/register', [
             'name' => 'John Doe',
             'email' => 'john@doe.com',
             'password' => 'johndoepass',
@@ -70,31 +70,77 @@ class UserControllerTest extends TestCase
     /**
      * Insert a user item without a custom slug.
      *
+     * @depends testRegisterUser
      * @return void
      */
     public function testActivateUser()
     {
-        $user = User::create([
-            'name' => 'Mommy Dearest',
-            'email' => 'mommy@dearest.com',
-            'password' => bcrypt('mommydearestpass')
-        ]);
+        $user = factory(User::class)->create();
         $activation = $user->create_activation();
-        $this->get('/api/v1/auth/activate/'.$activation->token, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        $this->get('/api/v1/activate/'.$activation->token, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson([
                 'user' => [
-                    'name' => 'Mommy Dearest',
-                    'email' => 'mommy@dearest.com'
+                    'name' => $user->name,
+                    'email' => $user->email,
                 ]
              ]);
         $this->assertDatabaseHas('users', [
-            'name' => 'Mommy Dearest',
-            'email' => 'mommy@dearest.com',
+            'name' => $user->name,
+            'email' => $user->email,
             'activated' => true
         ]);
         $this->assertDatabaseMissing('user_activations', [
-            'email' => 'mommy@dearest.com'
+            'email' => $user->email,
         ]);
         $this->assertTrue(Auth::user()->id == $user->id);
     }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testInvalidLoginUser()
+    {
+        User::create([
+            'name' => 'Another User',
+            'email' => 'another@test.com',
+            'password' => bcrypt('testpassword')
+        ])->activate();
+        
+        $this->post('/api/v1/login', [
+            'email' => 'another@test.com',
+            'password' => 'badpassword',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'message' => 'These credentials do not match our records.',
+        ]);
+        
+        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(['error' => 'Unauthenticated.']);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testValidLoginUser()
+    {
+        User::create([
+            'name' => 'Test User',
+            'email' => 'test@test.com',
+            'password' => bcrypt('testpassword')
+        ])->activate();
+        $this->post('/api/v1/login', [
+            'email' => 'test@test.com',
+            'password' => 'testpassword',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->json('GET', '/api/v1/test')
+             ->assertJson(["authenticated"]);
+    }   
 }

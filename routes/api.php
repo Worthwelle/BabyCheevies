@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['middleware' => ['api'], 'prefix' => '/v1'], function () {
+Route::group(['prefix' => '/v1'], function () {
     Route::get('/version', function() {
         return response()->json([
             'app' => config('app.name'),
@@ -21,6 +21,16 @@ Route::group(['middleware' => ['api'], 'prefix' => '/v1'], function () {
             'api' => 'v1'
         ]);
     });
-    Route::post('auth/register', 'Auth\ApiRegisterController@register');
-    Route::get('auth/activate/{token}', 'Auth\ApiRegisterController@activate');
+    Route::post('/register', 'Auth\UserController@register');
+    Route::get('/activate/{token}', 'Auth\UserController@activate');
+    Route::post('/login', 'Auth\LoginController@login')->name('login');
+    Route::group(['middleware' => ['auth:api']], function () {
+        Route::get('/logout', 'Auth\LoginController@logout');
+
+        Route::get('/test', function () {
+            return response()->json([
+                'authenticated'
+            ]);
+        });
+    });
 });
