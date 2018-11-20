@@ -21,8 +21,8 @@ Route::group(['prefix' => '/v1'], function () {
             'api' => 'v1'
         ]);
     });
-    Route::post('/register', 'Auth\UserController@register');
-    Route::get('/activate/{token}', 'Auth\UserController@activate');
+    Route::post('/register', 'Auth\RegisterController@register');
+    Route::get('/activate/{token}', 'Auth\RegisterController@activate');
     Route::post('/login', 'Auth\LoginController@login')->name('login');
     Route::group(['middleware' => ['auth:api']], function () {
         Route::get('/logout', 'Auth\LoginController@logout');

@@ -45,7 +45,7 @@ class LoginController extends Controller
         $user = User::where($this->username(),$username)->first();
         //Log::debug($user);
         if( !$user->active() ) {
-            return notActivated();
+            return $this->notActivated($request);
         }
         
         // If the class is using the ThrottlesLogins trait, we can automatically throttle
@@ -89,7 +89,7 @@ class LoginController extends Controller
         ]);
     }
     
-    protected function notActivated(Request $request, $user, $token)
+    protected function notActivated(Request $request)
     {
         return response()->json([
             'message' => trans('auth.activationpending'),
@@ -119,5 +119,8 @@ class LoginController extends Controller
     public function logout()
     {
        $this->guard()->logout(); // pass true to blacklist forever
+       return response()->json([
+            'message' => trans('auth.logout'),
+        ], 200);
     }
 }

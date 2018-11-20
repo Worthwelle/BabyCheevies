@@ -11,13 +11,8 @@ class UserControllerTest extends TestCase
 {
     /*
      * Things to test:
-     *  * Register user
-     *  * Register user with existing email
      *  * List users
-     *  * Login user
      *  * Login another user while a user is logged in
-     *  * Log out user
-     *  * Login another user
      *  * Remove a user
      * 
      * Once groups/roles are functional, tests will need to be updated.
@@ -40,7 +35,6 @@ class UserControllerTest extends TestCase
     /**
      * Insert a user item without a custom slug.
      *
-     * @depends testVersion
      * @return void
      */
     public function testRegisterUser()
@@ -65,6 +59,30 @@ class UserControllerTest extends TestCase
         $this->assertDatabaseHas('user_activations', [
             'email' => 'john@doe.com'
         ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @depends testRegisterUser
+     * @return void
+     */
+    public function testRegisterUserAgain()
+    {
+        $this->assertDatabaseHas('users', [
+            'email' => 'john@doe.com',
+        ]);
+        $this->post('/api/v1/register', [
+            'name' => 'John Doe Again',
+            'email' => 'john@doe.com',
+            'password' => 'johndoepass',
+            'password_confirmation' => 'johndoepass',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson([
+                'errors' => [
+                    'email' => ['The email has already been taken.'],
+                ]
+             ]);
     }
     
     /**
@@ -100,17 +118,66 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testInvalidLoginUser()
+    public function testValidLoginUser()
     {
-        User::create([
-            'name' => 'Another User',
-            'email' => 'another@test.com',
-            'password' => bcrypt('testpassword')
-        ])->activate();
+        $user = factory(User::class)->create();
+        $user->activate();
         
         $this->post('/api/v1/login', [
-            'email' => 'another@test.com',
-            'password' => 'badpassword',
+            'email' => $user->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(["authenticated"]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testLogoutUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+        
+        $this->post('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(["authenticated"]);
+        
+        $this->get('/api/v1/logout', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson([
+                 'message' => 'You have been logged out.'
+             ]);
+        
+        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(['error' => 'Unauthenticated.']);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testInvalidLoginUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+        
+        $this->post('/api/v1/login', [
+            'email' => $user->email,
+            'password' => "notsecret",
         ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertJson([
                 'message' => 'These credentials do not match our records.',
@@ -125,22 +192,20 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testValidLoginUser()
+    public function testInactiveLoginUser()
     {
-        User::create([
-            'name' => 'Test User',
-            'email' => 'test@test.com',
-            'password' => bcrypt('testpassword')
-        ])->activate();
+        $user = factory(User::class)->create();
+        $user->create_activation();
+        
         $this->post('/api/v1/login', [
-            'email' => 'test@test.com',
-            'password' => 'testpassword',
+            'email' => $user->email,
+            'password' => 'secret',
         ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
+        ->assertJson([
+                'message' => 'This account has not been activated. Please check your email.'
         ]);
         
-        $this->json('GET', '/api/v1/test')
-             ->assertJson(["authenticated"]);
-    }   
+        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(['error' => 'Unauthenticated.']);
+    }
 }
