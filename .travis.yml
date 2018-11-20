@@ -10,6 +10,8 @@ before_script:
   - composer self-update
   - composer install --no-interaction
   - php artisan key:generate
+  - php artisan vendor:publish --provider="Tymon\JWTAuth\Providers\LaravelServiceProvider"
+  - php artisan jwt:secret
   - php artisan migrate:install --env=testing --no-interaction -vvv
   - php artisan migrate --env=testing --no-interaction -vvv
   - php artisan db:seed --env=testing --no-interaction -vvv --class=TestSeeder
