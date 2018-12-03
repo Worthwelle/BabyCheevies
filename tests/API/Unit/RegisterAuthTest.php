@@ -4,7 +4,6 @@ namespace Tests\API\Unit;
 
 use Tests\TestCase;
 use BabyCheevies\User;
-use BabyCheevies\UserActivation;
 use Illuminate\Support\Facades\Auth;
 
 class UserControllerTest extends TestCase
