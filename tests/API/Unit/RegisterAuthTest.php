@@ -130,8 +130,8 @@ class UserControllerTest extends TestCase
                 'token'
         ]);
         
-        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-             ->assertJson(["authenticated"]);
+        $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(["user" => ['email' => $user->email]]);
     }
     
     /**
@@ -152,15 +152,15 @@ class UserControllerTest extends TestCase
                 'token'
         ]);
         
-        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-             ->assertJson(["authenticated"]);
+        $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+             ->assertJson(["user" => ['email' => $user->email]]);
         
         $this->get('/api/v1/logout', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson([
                  'message' => 'You have been logged out.'
              ]);
         
-        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson(['error' => 'Unauthenticated.']);
     }
     
@@ -182,7 +182,7 @@ class UserControllerTest extends TestCase
                 'message' => 'These credentials do not match our records.',
         ]);
         
-        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson(['error' => 'Unauthenticated.']);
     }
     
@@ -204,7 +204,157 @@ class UserControllerTest extends TestCase
                 'message' => 'This account has not been activated. Please check your email.'
         ]);
         
-        $this->get('/api/v1/test', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson(['error' => 'Unauthenticated.']);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testAdminDeleteUser()
+    {
+        $user = factory(User::class)->create();
+        
+        $admin = factory(User::class)->create();
+        $admin->activate();
+        $admin->assignRole('administrator');
+
+        $this->post('/api/v1/login', [
+            'email' => $admin->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'message' => 'successful'
+        ]);
+        $this->assertDatabaseMissing('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
+        ]);
+        $this->assertDatabaseMissing('user_activations', [
+            'email' => $user->email,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testSelfDeleteUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+
+        $this->post('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'message' => 'successful'
+        ]);
+        $this->assertDatabaseMissing('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
+        ]);
+        $this->assertDatabaseMissing('user_activations', [
+            'email' => $user->email,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testOtherDeleteUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+        $user2 = factory(User::class)->create();
+        $user2->activate();
+
+        $this->post('/api/v1/login', [
+            'email' => $user2->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertStatus(403);
+        $this->assertDatabaseHas('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testAdminEditUser()
+    {
+        $faker = \Faker\Factory::create();
+        
+        $user = factory(User::class)->create();
+        
+        $admin = factory(User::class)->create();
+        $admin->activate();
+        $admin->assignRole('administrator');
+        
+        $newName = $faker->name;
+        $newEmail = $faker->email;
+        $newPass = bcrypt("newsecret");
+
+        $this->post('/api/v1/login', [
+            'email' => $admin->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $newName,
+                    'email' => $user->email,
+                ]
+        ]);
+        $this->put('/api/v1/user/'.$user->id, ['name' => $user->name, 'email' => $newEmail], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $newEmail,
+                ]
+        ]);
+        $this->put('/api/v1/user/'.$user->id, ['password' => $newPass, 'password_confirmation' => $newPass], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $newEmail,
+                ]
+        ]);
+        $this->assertDatabaseHas('users', [
+            'name' => $user->name,
+            'email' => $newEmail,
+        ]);
     }
 }

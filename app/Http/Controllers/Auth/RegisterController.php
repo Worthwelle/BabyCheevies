@@ -33,7 +33,7 @@ class RegisterController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('guest');
+        $this->middleware('guest', ['except' => ['destroy', 'update']]);
     }
 
     /**
@@ -42,8 +42,15 @@ class RegisterController extends Controller
      * @param  array  $data
      * @return \Illuminate\Contracts\Validation\Validator
      */
-    protected function validator(array $data)
+    protected function validator(array $data, $optional = false)
     {
+        if( $optional ) {
+            return Validator::make($data, [
+                'name' => 'nullable|string|max:255',
+                'email' => 'nullable|string|email|max:255|unique:users',
+                'password' => 'nullable|string|min:6|confirmed',
+            ]);
+        }
         return Validator::make($data, [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -81,11 +88,9 @@ class RegisterController extends Controller
             return response(['errors' => $errors], 401);
         }
 
-        event(new Registered($user = $this->create($request->all())));
+        event(new Registered($user = $this->create($request->only('name', 'email', 'password', 'password_confirmation'))));
         
         $user->create_activation();
-
-        //$this->guard()->login($user);
 
         return response(['user' => $user]);
     }
@@ -142,5 +147,63 @@ class RegisterController extends Controller
     public function guard()
     {
         return Auth::guard();
+    }
+    
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        if(!(Auth::user()->id == $id || Auth::user()->can('delete_users'))) {
+            abort(403, 'Unauthorized action.');
+        }
+        $user = User::where('id',$id)->first();
+        
+        $activation = UserActivation::where('email',$user->email);
+        if( $activation !== null ) {
+            $activation->delete();
+        }
+        $user->delete();
+
+        return response()->json(['message' => 'successful']);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        if(!(Auth::user()->id == $id || Auth::user()->can('edit_users'))) {
+            abort(403, 'Unauthorized action.');
+        }
+        
+        $errors = $this->validator($input = $request->only('name', 'email', 'password', 'password_confirmation'), true)->errors();
+        if(count($errors))
+        {
+            return response(['errors' => $errors], 401);
+        }
+        
+        $user = User::where('id',$id)->first();
+        
+        if( isset( $request['name'] ) ) {
+            $user->name = $request['name'];
+        }
+        if( isset( $request['email'] ) ) {
+            $user->email = $request['email'];
+        }
+        if( isset( $request['password'] ) ) {
+            $user->password = $request['password'];
+        }
+        
+        $user->save();
+
+        return response()->json(['user' => $user]);
     }
 }

@@ -27,10 +27,12 @@ Route::group(['prefix' => '/v1'], function () {
     Route::group(['middleware' => ['auth:api']], function () {
         Route::get('/logout', 'Auth\LoginController@logout');
 
-        Route::get('/test', function () {
+        Route::get('/me', function () {
             return response()->json([
-                'authenticated'
+                'user' => Auth::user()
             ]);
         });
+        Route::delete('/user/{id}', 'Auth\RegisterController@destroy');
+        Route::put('/user/{id}', 'Auth\RegisterController@update');
     });
 });
