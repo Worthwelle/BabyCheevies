@@ -27,7 +27,6 @@ class UserControllerTest extends TestCase
         $this->get('/api/v1/version', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson([
             'app' => "Baby Cheevies",
-            'version' => '0.0'
              ]);
     }
     
