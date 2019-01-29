@@ -22,7 +22,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testVersion()
+    public function testCanRetrieveVersion()
     {
         $this->get('/api/v1/version', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson([
@@ -35,7 +35,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testRegisterUser()
+    public function testCanRegisterUsers()
     {
         $this->post('/api/v1/register', [
             'name' => 'John Doe',
@@ -62,10 +62,10 @@ class UserControllerTest extends TestCase
     /**
      * Insert a user item without a custom slug.
      *
-     * @depends testRegisterUser
+     * @depends testCanRegisterUsers
      * @return void
      */
-    public function testRegisterUserAgain()
+    public function testCannotRegisterUserWithExistingEmail()
     {
         $this->assertDatabaseHas('users', [
             'email' => 'john@doe.com',
@@ -86,10 +86,10 @@ class UserControllerTest extends TestCase
     /**
      * Insert a user item without a custom slug.
      *
-     * @depends testRegisterUser
+     * @depends testCanRegisterUsers
      * @return void
      */
-    public function testActivateUser()
+    public function testCanActivateUser()
     {
         $user = factory(User::class)->create();
         $activation = $user->create_activation();
@@ -116,7 +116,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testValidLoginUser()
+    public function testCanLoginValidUser()
     {
         $user = factory(User::class)->create();
         $user->activate();
@@ -138,7 +138,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testLogoutUser()
+    public function testCanLogoutValidUser()
     {
         $user = factory(User::class)->create();
         $user->activate();
@@ -168,7 +168,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testInvalidLoginUser()
+    public function testCannotLoginInvalidUser()
     {
         $user = factory(User::class)->create();
         $user->activate();
@@ -190,7 +190,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testInactiveLoginUser()
+    public function testCannotLoginInactiveUser()
     {
         $user = factory(User::class)->create();
         $user->create_activation();
@@ -212,103 +212,7 @@ class UserControllerTest extends TestCase
      *
      * @return void
      */
-    public function testAdminDeleteUser()
-    {
-        $user = factory(User::class)->create();
-        
-        $admin = factory(User::class)->create();
-        $admin->activate();
-        $admin->assignRole('administrator');
-
-        $this->post('/api/v1/login', [
-            'email' => $admin->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
-        
-        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJson([
-                'message' => 'successful'
-        ]);
-        $this->assertDatabaseMissing('users', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'activated' => true
-        ]);
-        $this->assertDatabaseMissing('user_activations', [
-            'email' => $user->email,
-        ]);
-    }
-    
-    /**
-     * Insert a user item without a custom slug.
-     *
-     * @return void
-     */
-    public function testSelfDeleteUser()
-    {
-        $user = factory(User::class)->create();
-        $user->activate();
-
-        $this->post('/api/v1/login', [
-            'email' => $user->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
-        
-        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJson([
-                'message' => 'successful'
-        ]);
-        $this->assertDatabaseMissing('users', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'activated' => true
-        ]);
-        $this->assertDatabaseMissing('user_activations', [
-            'email' => $user->email,
-        ]);
-    }
-    
-    /**
-     * Insert a user item without a custom slug.
-     *
-     * @return void
-     */
-    public function testOtherDeleteUser()
-    {
-        $user = factory(User::class)->create();
-        $user->activate();
-        $user2 = factory(User::class)->create();
-        $user2->activate();
-
-        $this->post('/api/v1/login', [
-            'email' => $user2->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
-        
-        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertStatus(403);
-        $this->assertDatabaseHas('users', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'activated' => true
-        ]);
-    }
-    
-    /**
-     * Insert a user item without a custom slug.
-     *
-     * @return void
-     */
-    public function testAdminEditUser()
+    public function testAdminCanEditUser()
     {
         $faker = \Faker\Factory::create();
         
@@ -354,6 +258,186 @@ class UserControllerTest extends TestCase
         $this->assertDatabaseHas('users', [
             'name' => $user->name,
             'email' => $newEmail,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testCanSelfEditUser()
+    {
+        $faker = \Faker\Factory::create();
+        
+        $user = factory(User::class)->create();
+        $user->activate();
+        
+        $newName = $faker->name;
+        $newEmail = $faker->email;
+        $newPass = bcrypt("newsecret");
+
+        $this->post('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $newName,
+                    'email' => $user->email,
+                ]
+        ]);
+        $this->put('/api/v1/user/'.$user->id, ['name' => $user->name, 'email' => $newEmail], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $newEmail,
+                ]
+        ]);
+        $this->put('/api/v1/user/'.$user->id, ['password' => $newPass, 'password_confirmation' => $newPass], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $newEmail,
+                ]
+        ]);
+        $this->assertDatabaseHas('users', [
+            'name' => $user->name,
+            'email' => $newEmail,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testCannotEditOtherUser()
+    {
+        $faker = \Faker\Factory::create();
+        
+        $user = factory(User::class)->create();
+        $user->activate();
+        
+        $other = factory(User::class)->create();
+        $other->activate();
+        
+        $newName = $faker->name;
+
+        $this->post('/api/v1/login', [
+            'email' => $other->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertStatus(403);
+        $this->assertDatabaseHas('users', [
+            'name' => $user->name,
+            'email' => $user->email
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testAdminCanDeleteUser()
+    {
+        $user = factory(User::class)->create();
+        
+        $admin = factory(User::class)->create();
+        $admin->activate();
+        $admin->assignRole('administrator');
+
+        $this->post('/api/v1/login', [
+            'email' => $admin->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'message' => 'successful'
+        ]);
+        $this->assertDatabaseMissing('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
+        ]);
+        $this->assertDatabaseMissing('user_activations', [
+            'email' => $user->email,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testCanSelfDeleteUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+
+        $this->post('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJson([
+                'message' => 'successful'
+        ]);
+        $this->assertDatabaseMissing('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
+        ]);
+        $this->assertDatabaseMissing('user_activations', [
+            'email' => $user->email,
+        ]);
+    }
+    
+    /**
+     * Insert a user item without a custom slug.
+     *
+     * @return void
+     */
+    public function testCannotDeleteAnotherUser()
+    {
+        $user = factory(User::class)->create();
+        $user->activate();
+        $user2 = factory(User::class)->create();
+        $user2->activate();
+
+        $this->post('/api/v1/login', [
+            'email' => $user2->email,
+            'password' => 'secret',
+        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertJsonStructure([
+                'token'
+        ]);
+        
+        $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
+        ->assertStatus(403);
+        $this->assertDatabaseHas('users', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'activated' => true
         ]);
     }
 }
