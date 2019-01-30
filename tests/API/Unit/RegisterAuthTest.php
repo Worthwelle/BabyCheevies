@@ -142,14 +142,7 @@ class UserControllerTest extends TestCase
     {
         $user = factory(User::class)->create();
         $user->activate();
-        
-        $this->post('/api/v1/login', [
-            'email' => $user->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($user);
         
         $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
              ->assertJson(["user" => ['email' => $user->email]]);
@@ -215,24 +208,14 @@ class UserControllerTest extends TestCase
     public function testAdminCanEditUser()
     {
         $faker = \Faker\Factory::create();
-        
         $user = factory(User::class)->create();
-        
         $admin = factory(User::class)->create();
         $admin->activate();
         $admin->assignRole('administrator');
-        
         $newName = $faker->name;
         $newEmail = $faker->email;
         $newPass = bcrypt("newsecret");
-
-        $this->post('/api/v1/login', [
-            'email' => $admin->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($admin);
         
         $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertJson([
@@ -269,21 +252,12 @@ class UserControllerTest extends TestCase
     public function testCanSelfEditUser()
     {
         $faker = \Faker\Factory::create();
-        
         $user = factory(User::class)->create();
         $user->activate();
-        
         $newName = $faker->name;
         $newEmail = $faker->email;
         $newPass = bcrypt("newsecret");
-
-        $this->post('/api/v1/login', [
-            'email' => $user->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($user);
         
         $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertJson([
@@ -320,22 +294,12 @@ class UserControllerTest extends TestCase
     public function testCannotEditOtherUser()
     {
         $faker = \Faker\Factory::create();
-        
         $user = factory(User::class)->create();
         $user->activate();
-        
         $other = factory(User::class)->create();
         $other->activate();
-        
         $newName = $faker->name;
-
-        $this->post('/api/v1/login', [
-            'email' => $other->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($other);
         
         $this->put('/api/v1/user/'.$user->id, ['name' => $newName], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertStatus(403);
@@ -353,18 +317,10 @@ class UserControllerTest extends TestCase
     public function testAdminCanDeleteUser()
     {
         $user = factory(User::class)->create();
-        
         $admin = factory(User::class)->create();
         $admin->activate();
         $admin->assignRole('administrator');
-
-        $this->post('/api/v1/login', [
-            'email' => $admin->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($admin);
         
         $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertJson([
@@ -389,14 +345,7 @@ class UserControllerTest extends TestCase
     {
         $user = factory(User::class)->create();
         $user->activate();
-
-        $this->post('/api/v1/login', [
-            'email' => $user->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($user);
         
         $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertJson([
@@ -423,14 +372,7 @@ class UserControllerTest extends TestCase
         $user->activate();
         $user2 = factory(User::class)->create();
         $user2->activate();
-
-        $this->post('/api/v1/login', [
-            'email' => $user2->email,
-            'password' => 'secret',
-        ], ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-        ->assertJsonStructure([
-                'token'
-        ]);
+        Auth::login($user2);
         
         $this->delete('/api/v1/user/'.$user->id, ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
         ->assertStatus(403);

@@ -43,7 +43,6 @@ class LoginController extends Controller
         $credentials = $this->credentials($request);
         $username = $credentials[$this->username()];
         $user = User::where($this->username(),$username)->first();
-        //Log::debug($user);
         if( !$user->active() ) {
             return $this->notActivated($request);
         }
