@@ -153,7 +153,7 @@ class UserControllerTest extends TestCase
              ]);
         
         $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-             ->assertJson(['error' => 'Unauthenticated.']);
+             ->assertStatus(401);
     }
     
     /**
@@ -175,7 +175,7 @@ class UserControllerTest extends TestCase
         ]);
         
         $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
-             ->assertJson(['error' => 'Unauthenticated.']);
+             ->assertStatus(401);
     }
     
     /**

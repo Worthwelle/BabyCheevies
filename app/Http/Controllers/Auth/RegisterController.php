@@ -2,6 +2,7 @@
 
 namespace BabyCheevies\Http\Controllers\Auth;
 
+use BabyCheevies\ChecksPermissions;
 use BabyCheevies\User;
 use BabyCheevies\UserActivation;
 use BabyCheevies\Http\Controllers\Controller;
@@ -24,7 +25,7 @@ class RegisterController extends Controller
     |
     */
 
-    use RegistersUsers;
+    use RegistersUsers, ChecksPermissions;
 
     /**
      * Create a new controller instance.
@@ -157,10 +158,8 @@ class RegisterController extends Controller
      */
     public function destroy($id)
     {
-        if(!(Auth::user()->id == $id || Auth::user()->can('delete_users'))) {
-            abort(403, 'Unauthorized action.');
-        }
-        $user = User::where('id',$id)->first();
+        $this->isOrCan($id, 'delete_users');
+        $user = User::find($id);
         
         $activation = UserActivation::where('email',$user->email);
         if( $activation !== null ) {
@@ -180,9 +179,7 @@ class RegisterController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if(!(Auth::user()->id == $id || Auth::user()->can('edit_users'))) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->isOrCan($id, 'edit_users');
         
         $errors = $this->validator($input = $request->only('name', 'email', 'password', 'password_confirmation'), true)->errors();
         if(count($errors))
