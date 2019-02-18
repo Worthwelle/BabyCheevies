@@ -21,3 +21,9 @@ $factory->define(BabyCheevies\User::class, function (Faker\Generator $faker) {
         'password' => $password ?: $password = bcrypt('secret'),
     ];
 });
+$factory->define(BabyCheevies\Role::class, function (Faker\Generator $faker) {
+    return [
+        'name' => $faker->word,
+        'label' => $faker->words(3, true),
+    ];
+});

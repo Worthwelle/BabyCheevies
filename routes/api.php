@@ -26,7 +26,6 @@ Route::group(['prefix' => '/v1'], function () {
     Route::post('/login', 'Auth\LoginController@login')->name('login');
     Route::group(['middleware' => ['auth:api']], function () {
         Route::get('/logout', 'Auth\LoginController@logout');
-
         Route::get('/me', function () {
             return response()->json([
                 'user' => Auth::user()
@@ -34,5 +33,6 @@ Route::group(['prefix' => '/v1'], function () {
         });
         Route::delete('/user/{id}', 'Auth\RegisterController@destroy');
         Route::put('/user/{id}', 'Auth\RegisterController@update');
+        Route::apiResource('roles', 'RoleController');
     });
 });
