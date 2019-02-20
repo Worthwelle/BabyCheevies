@@ -27,3 +27,9 @@ $factory->define(BabyCheevies\Role::class, function (Faker\Generator $faker) {
         'label' => $faker->words(3, true),
     ];
 });
+$factory->define(BabyCheevies\Permission::class, function (Faker\Generator $faker) {
+    return [
+        'name' => $faker->word,
+        'label' => $faker->words(3, true),
+    ];
+});

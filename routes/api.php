@@ -34,5 +34,6 @@ Route::group(['prefix' => '/v1'], function () {
         Route::delete('/user/{id}', 'Auth\RegisterController@destroy');
         Route::put('/user/{id}', 'Auth\RegisterController@update');
         Route::apiResource('roles', 'RoleController');
+        Route::apiResource('permissions', 'PermissionController');
     });
 });
