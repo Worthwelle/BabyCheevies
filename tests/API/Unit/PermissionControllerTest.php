@@ -168,7 +168,6 @@ class PermissionControllerTest extends TestCase
      */
     public function testNonadminCannotDeletePermissions()
     {
-        $this->markTestSkipped('Guest user is redirected to login page when attempting to delete.');
         $role = factory(Permission::class)->create();
         
         $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])

@@ -167,7 +167,6 @@ class RoleControllerTest extends TestCase
      */
     public function testNonadminCannotDeleteRoles()
     {
-        $this->markTestSkipped('Guest user is redirected to login page when attempting to delete.');
         $role = factory(Role::class)->create();
         
         $this->get('/api/v1/me', ['HTTP_X-Requested-With' => 'XMLHttpRequest'])
